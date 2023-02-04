@@ -1,27 +1,20 @@
-from enum import Enum
 import os
 import time
 import cv2
 import shutil
-
-
-class LogTypes(Enum):
-    COMMON = 0  # общие логи
-    DETAILED = 1    # детальные логи
-    COMPLETE = 2    # полные логи
-
+import prconsts as pc
 
 class ExtendedLog:
     enabled = True
-    global_log_type = LogTypes.COMMON
+    level = pc.LOG_LVL_COMMON
 
     folder_name = "Logs"
     image_folder_name = "ImageLog"
     filename = 'TextLog.txt'
     img_type = '.png'
 
-    def write(log_type, text, img=None, console=True, exceptional=False):
-        if not ExtendedLog.enabled or log_type.value > ExtendedLog.global_log_type.value:
+    def write(level, text, img=None, console=True, exceptional=False):
+        if not ExtendedLog.enabled or level > ExtendedLog.level:
             return
         parent_directory = os.getcwd()
         log_dir = os.path.join(parent_directory, ExtendedLog.folder_name)
@@ -37,14 +30,14 @@ class ExtendedLog:
         else:
             textlog = text
         file_path = os.path.join(log_dir, ExtendedLog.filename)
-        with open(file_path, "a") as file:
+        with open(file_path, "a", encoding="utf-8") as file:
             file.write(f"{textlog}\n")
         if console:
             print(textlog)
 
     # устанавливает отображение логов по степени информативности
-    def set_global_type(log_type):
-        ExtendedLog.global_log_type = log_type
+    def set_level(level):
+        ExtendedLog.level = level
 
     def clear():
         path = os.path.join(os.getcwd(), ExtendedLog.folder_name)
@@ -56,3 +49,10 @@ class ExtendedLog:
 
     def enable():
         ExtendedLog.enabled = True
+
+
+# для прямых тестов модуля
+if __name__ == '__main__':
+    ExtendedLog.clear()
+    ExtendedLog.set_level(pc.LOG_LVL_COMMON)
+    ExtendedLog.write(pc.LOG_LVL_COMMON, 'Just a random text...')
