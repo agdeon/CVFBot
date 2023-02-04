@@ -5,8 +5,9 @@ import sys
 from extLog import ExtendedLog
 
 
-class Tester:
-    def __init__(self):
+class MTest:
+    def __init__(self, text):
+        self.name = text
         self.exit = False
         self.numpad_listener = None
         self.associations = []
@@ -16,18 +17,18 @@ class Tester:
 
     def bind(self, func, key_const):
         self.associations.append((func, key_const))
-        ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"Функция {func.__name__} привязана к клавише {key_const}")
+        ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"{self.name}: Функция {func.__name__} привязана к клавише {key_const}")
 
-    def start(self, inf_loop=False):
-        ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"Tester запущен с inf_loop={inf_loop}")
+    def start(self, loop=False):
+        ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"{self.name}: Test запущен с loop={loop}")
         self.numpad_listener = keyboard.Listener(on_press=self._numpad_on_press)
         self.numpad_listener.start()
-        if not inf_loop:
+        if not loop:
             return
         while 1:
             time.sleep(0.3)
             if self.exit:
-                ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"Tester завершил работу")
+                ExtendedLog.write(pc.LOG_LVL_COMPLETE, f"{self.name}: Test завершен")
                 sys.exit()
 
     def _numpad_on_press(self, key_code):
@@ -46,7 +47,7 @@ class Tester:
 
 
 # для прямых тестов модуля
-if __name__ == '__main__':
-    test1 = Tester()
-    test1.bind(test1.exit_script, pc.KEY_NUM0)
-    test1.start(inf_loop=True)
+# if __name__ == '__main__':
+#     test1 = MTest('exit_script test')
+#     test1.bind(test1.exit_script, pc.KEY_NUM0)
+#     test1.start(loop=True)

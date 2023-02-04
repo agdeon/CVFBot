@@ -52,7 +52,8 @@ class ExtendedLog:
 
 
 # для прямых тестов модуля
-if __name__ == '__main__':
-    ExtendedLog.clear()
-    ExtendedLog.set_level(pc.LOG_LVL_COMMON)
-    ExtendedLog.write(pc.LOG_LVL_COMMON, 'Just a random text...')
+# if __name__ == '__main__':
+#     ExtendedLog.clear()
+#     ExtendedLog.set_level(pc.LOG_LVL_COMMON)
+#     ExtendedLog.write(pc.LOG_LVL_COMMON, 'Just a random text...')
+
