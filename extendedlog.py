@@ -2,7 +2,8 @@ import os
 import time
 import cv2
 import shutil
-import prconsts as pc
+import projectconstants as pc
+
 
 class ExtendedLog:
     enabled = True
