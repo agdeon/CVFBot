@@ -1,5 +1,3 @@
-# project constants
-
 # log level constants
 LOG_LVL_COMMON = 0
 LOG_LVL_DETAILED = 1

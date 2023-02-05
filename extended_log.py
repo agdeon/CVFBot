@@ -2,12 +2,13 @@ import os
 import time
 import cv2
 import shutil
-import projectconstants as pc
+
+import constants
 
 
 class ExtendedLog:
     enabled = True
-    level = pc.LOG_LVL_COMMON
+    level = constants.LOG_LVL_COMMON
 
     folder_name = "Logs"
     image_folder_name = "ImageLog"
@@ -55,6 +56,6 @@ class ExtendedLog:
 # для прямых тестов модуля
 # if __name__ == '__main__':
 #     ExtendedLog.clear()
-#     ExtendedLog.set_level(pc.LOG_LVL_COMMON)
-#     ExtendedLog.write(pc.LOG_LVL_COMMON, 'Just a random text...')
+#     ExtendedLog.set_level(cnst.LOG_LVL_COMMON)
+#     ExtendedLog.write(cnst.LOG_LVL_COMMON, 'Just a random text...')
 
