@@ -37,14 +37,14 @@ class FTest:
         func = self._get_func_by_key(key_code)
         if func is None:
             return
-        self.interm_resulst = func(self.interm_resulst)
+        self.interm_resulst = func()
 
     def _get_func_by_key(self, key_code):
         for f, kc in self.associations:
             if str(key_code) == kc:
                 return f
 
-    def _stop(self, interm_resulst):
+    def _stop(self):
         if self.numpad_listener is not None:
             self.numpad_listener.stop()
         self.exit = True

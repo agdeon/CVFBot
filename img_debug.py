@@ -19,3 +19,7 @@ class ImgDebug:
     @staticmethod
     def enable():
         ImgDebug.enabled = True
+
+    @staticmethod
+    def disable():
+        ImgDebug.enabled = False
