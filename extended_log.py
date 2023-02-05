@@ -6,7 +6,7 @@ import constants
 
 
 class ExtendedLog:
-    enabled = True
+    enabled = False
     level = constants.LOG_LVL_COMMON
     folder_name = "Logs"
     img_folder_name = "ImageLog"
