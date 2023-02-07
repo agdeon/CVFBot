@@ -15,9 +15,9 @@ class FTest:
         self.numpad_listener = None
         self.associations = []
         self.interm_resulst = None
-        self.bind(self._stop, constants.KEY_NUM0)
+        self.assign(self._stop, constants.KEY_NUM0)
 
-    def bind(self, func, key_const):
+    def assign(self, func, key_const):
         self.associations.append((func, key_const))
         ExtendedLog.write(constants.LOG_LVL_COMPLETE, f"[{self.name}]: Функция {func.__name__} привязана к клавише {key_const}")
 
@@ -37,7 +37,7 @@ class FTest:
         func = self._get_func_by_key(key_code)
         if func is None:
             return
-        self.interm_resulst = func()
+        func()
 
     def _get_func_by_key(self, key_code):
         for f, kc in self.associations:

@@ -4,116 +4,82 @@ import numpy as np
 import math
 import time
 
-import constants
-from func_tester import FTest
-from extended_log import ExtendedLog
-from img_debug import ImgDebug
+from constants import *
+from func_tester import *
+from extended_log import *
+from img_debug import *
 
 
-# Common variables
-class CVar:
-    inventory_coords = []
-    image = cv2.imread('night.png')
+# Переменные в ходе работы
+class Runtime:
+    image = None
+    inventory_area_img = None
+    inventory_coords = None
+    thresholded_inv_img = None
+    contours = None
+    hierarchy = None
+    square_contours = None
+    square_rects = None
 
 
-################################
-# Вспомогательные функции
-################################
-def get_distance(start_point, end_point):
-    return math.sqrt(abs(start_point[0] - end_point[0]) ** 2 + abs(start_point[1] - end_point[1]) ** 2)
+# Финальные значения
+class Finals:
+    inv_rects_with_collisions = None
+    relative_inventory_rects = None
 
 
-def is_all_approx_equal(array, etalon, max_deviation):
-    for i in array:
-        if abs(i - etalon) > max_deviation:
+# Computing Functions
+class CFunc:
+    @staticmethod
+    def get_distance(start_point, end_point):
+        return math.sqrt(abs(start_point[0] - end_point[0]) ** 2 + abs(start_point[1] - end_point[1]) ** 2)
+
+    @staticmethod
+    def is_contour_in_area(contour, area):
+        for vector in contour:
+            for point in vector:
+                in_area = area[0][0] < point[0] < area[1][0] and area[0][1] < point[1] < area[1][1]
+                if not in_area:
+                    return False
+        return True
+
+    @staticmethod
+    def get_contour_rect(contour):
+        x, y, w, h = cv2.boundingRect(contour)
+        return [x, y, x + w, y + h]
+
+    @staticmethod
+    def has_same_rects(array_of_rects, chk_rect):
+        max_deviation = 5
+        for cur_rect in array_of_rects:
+            if abs(cur_rect[0] - chk_rect[0]) <= max_deviation \
+                    and abs(cur_rect[1] - chk_rect[1]) <= max_deviation \
+                    and abs(cur_rect[2] - chk_rect[2]) <= max_deviation \
+                    and abs(cur_rect[3] - chk_rect[3]) <= max_deviation:
+                return True
+        return False
+
+    @staticmethod
+    def is_contour_square(contour):
+        # 4 аппроксимы
+        approx = cv2.approxPolyDP(contour, 5, True)
+        if len(approx) != 4:
             return False
 
-    return True
-
-
-def is_contour_in_area(contour, area):
-    for vector in contour:
-        for point in vector:
-            in_area = area[0][0] < point[0] < area[1][0] and area[0][1] < point[1] < area[1][1]
-            if not in_area:
-                return False
-    return True
-
-
-def get_contour_coords(contour):
-    x, y, w, h = cv2.boundingRect(contour)
-    return [x, y, x + w, y + h]
-
-
-def array_has_double_coords(array, chk_coord, max_deviation):
-    for cur_coord in array:
-        if abs(cur_coord[0] - chk_coord[0]) <= max_deviation \
-                and abs(cur_coord[1] - chk_coord[1]) <= max_deviation \
-                and abs(cur_coord[2] - chk_coord[2]) <= max_deviation \
-                and abs(cur_coord[3] - chk_coord[3]) <= max_deviation:
-            return True
-    return False
-
-
-##########################
-# Функции для привязки
-##########################
-def take_screenshot():
-    img = pyautogui.screenshot()
-    CVar.image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-    ExtendedLog.write(constants.LOG_LVL_DETAILED, 'Скриншот сохранен', CVar.image)
-
-
-def threshold_show():
-    imgray = cv2.cvtColor(CVar.image, cv2.COLOR_RGB2GRAY)
-    imgray = cv2.medianBlur(imgray, 3)
-    adp_thresh = cv2.adaptiveThreshold(imgray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    ExtendedLog.write(constants.LOG_LVL_DETAILED, f'Adaptive thresh gaussian', adp_thresh)
-    ImgDebug.display(adp_thresh)
-
-
-def find_squares(img):
-    imgray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    imgray = cv2.medianBlur(imgray, 5)
-    adp_thresh = cv2.adaptiveThreshold(imgray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    all_contours, hierarchy = cv2.findContours(adp_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    bgr_img = cv2.cvtColor(adp_thresh, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(bgr_img, all_contours, -1, (0, 255, 0), 3)
-    ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Все контуры найдены {len(all_contours)}шт. ', bgr_img)
-    ImgDebug.display(bgr_img)
-
-    # Отсев по длинне дуги
-    cnts_sifted_by_length = []
-    for cnt in all_contours:
-        perim = cv2.arcLength(cnt, True)
-        if 230 < perim < 450:
-            cnts_sifted_by_length.append(cnt)
-    ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Подходят по длинне дуги: {len(cnts_sifted_by_length)} шт. ')
-
-    # Ищем только квадраты
-    square_contours = []
-    for cnt in cnts_sifted_by_length:
-        perim = cv2.arcLength(cnt, True)
-        approx = cv2.approxPolyDP(cnt, 10, True)
-        if len(approx) != 4:
-            ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Апроксим должно быть 4!')
-            continue
-
         # Проверка на равность близл. сторон
-        max_deviation = 15
+        max_deviation = 3
         curve1_start_point = approx[0][0]
         curve2_start_point = approx[1][0]
         curve3_start_point = approx[2][0]
         curve4_start_point = approx[3][0]
-        dist_1_to_2 = get_distance(curve1_start_point, curve2_start_point)
-        dist_2_to_3 = get_distance(curve2_start_point, curve3_start_point)
-        dist_3_to_4 = get_distance(curve3_start_point, curve4_start_point)
-        dist_4_to_1 = get_distance(curve4_start_point, curve1_start_point)
+        dist_1_to_2 = CFunc.get_distance(curve1_start_point, curve2_start_point)
+        dist_2_to_3 = CFunc.get_distance(curve2_start_point, curve3_start_point)
+        dist_3_to_4 = CFunc.get_distance(curve3_start_point, curve4_start_point)
+        dist_4_to_1 = CFunc.get_distance(curve4_start_point, curve1_start_point)
         dist_list = [dist_1_to_2, dist_2_to_3, dist_3_to_4, dist_4_to_1]
         if max(dist_list) - min(dist_list) > max_deviation:
-            ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Стороны не равны! {max(dist_list)}, {min(dist_list)}')
-            continue
-        ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Стороны РАВНЫ: {max(dist_list)}, {min(dist_list)}')
+            return False
+        ExtendedLog.write(LOG_LVL_COMPLETE, f'Стороны РАВНЫ: {max(dist_list)}, {min(dist_list)}')
 
         # Проверка на прямые углы
         max_deviation = 3
@@ -127,70 +93,150 @@ def find_squares(img):
                 ppdicular_cnt += 1
             prev_curve = curve
         if ppdicular_cnt != 4:
-            ExtendedLog.write(constants.LOG_LVL_COMPLETE, f'Прямых углов меньше чем 4')
-            continue
+            return False
 
-        # Найден квадрат
-        square_contours.append(cnt)
-
-    bgr_img = cv2.cvtColor(adp_thresh, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(bgr_img, square_contours, -1, (0, 255, 0), 3)
-    ImgDebug.display(bgr_img)
-    ExtendedLog.write(constants.LOG_LVL_DETAILED, f'Контуры квадратов: найдено {len(square_contours)} шт. ', bgr_img)
-
-    h, w, ch = img.shape
-    search_area = [
-        [w / 2 - w / 6, h / 2],  # top left
-        [w / 2 + w / 6, h]  # bottom right
-    ]
-    sifted_by_area_cnts = []
-    for cnt in square_contours:
-        if is_contour_in_area(cnt, search_area):
-            sifted_by_area_cnts.append(cnt)
-
-    # Выбор слотов инвентаря
-    inventory_contours = []
-    for cnt in sifted_by_area_cnts:
-        if abs(cv2.arcLength(cnt, True) - cv2.arcLength(sifted_by_area_cnts[0], True)) < 5:
-            inventory_contours.append(cnt)
-    bgr_img = cv2.cvtColor(adp_thresh, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(bgr_img, inventory_contours, -1, (0, 255, 255), 3)
-    ImgDebug.display(bgr_img)
-    ExtendedLog.write(constants.LOG_LVL_DETAILED, f'Контуры инвентаря найдены: {inventory_contours}', bgr_img)
-
-    # Создаем массив координат квадратов [[x0, y0, x1, y1],...] на основе найденных контуров
-    inv_squares_coords = []
-    for cnt in inventory_contours:
-        inv_squares_coords.append(get_contour_coords(cnt))
-
-    return inv_squares_coords
+        return True
 
 
-def find_all_inventory_coords():
-    cur_coords = find_squares(CVar.image)
-    for coord in cur_coords:
-        if not array_has_double_coords(CVar.inventory_coords, coord, 3):
-            CVar.inventory_coords.append(coord)
-    ExtendedLog.write(constants.LOG_LVL_DETAILED, f'Найдено слотов инвентаря: {len(CVar.inventory_coords)}')
+# Main Functions
+class MFunc:
+    @staticmethod
+    def load_test_img():
+        Runtime.image = cv2.imread('day.png')
+
+    @staticmethod
+    def take_screenshot():
+        img = pyautogui.screenshot()
+        Runtime.image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        ExtendedLog.write(LOG_LVL_DETAILED, 'Скриншот сохранен', Runtime.image)
+
+    @staticmethod
+    def select_inventory_area_img():
+        h, w, c = Runtime.image.shape
+        x0 = w / 2 - w / 6
+        y0 = h / 2
+        x1 = w / 2 + w / 6.5
+        y1 = h
+        sub_image = Runtime.image[round(y0):round(y1), round(x0):round(x1)]
+        Runtime.inventory_area_img = sub_image
+        Runtime.inventory_coords = [x0, y0, x1, y1]
+
+        ExtendedLog.write(LOG_LVL_DETAILED, 'Рабочая область изображения вычислена', sub_image)
+        ImgDebug.display(sub_image)
+
+    @staticmethod
+    def threshold_inventory_area_img(blur, thresh):
+        imgray = cv2.cvtColor(Runtime.inventory_area_img, cv2.COLOR_RGB2GRAY)
+        blured = cv2.medianBlur(imgray, blur)
+        adp_thresh = cv2.adaptiveThreshold(blured, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, thresh, 2)
+        Runtime.thresholded_inv_img = adp_thresh
+
+        ExtendedLog.write(LOG_LVL_COMPLETE, f'Thresholding test', adp_thresh)
+        ImgDebug.display(adp_thresh)
+
+    @staticmethod
+    def find_all_contours():
+        Runtime.contours, Runtime.hierarchy = \
+            cv2.findContours(Runtime.thresholded_inv_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+        all_cnt_img = cv2.cvtColor(Runtime.thresholded_inv_img, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(all_cnt_img, Runtime.contours, -1, (0, 255, 0), 1)
+        ExtendedLog.write(LOG_LVL_COMPLETE, f'All contours found', all_cnt_img)
+        ImgDebug.display(all_cnt_img)
+
+    @staticmethod
+    def find_inventory_squares_only():
+        # Отсев по длинне дуги
+        cnts_sifted_by_length = []
+        for cnt in Runtime.contours:
+            perim = cv2.arcLength(cnt, True)
+            if 250 < perim < 500:
+                cnts_sifted_by_length.append(cnt)
+        ExtendedLog.write(LOG_LVL_COMPLETE, f'Подходят по длинне дуги: {len(cnts_sifted_by_length)} шт. ')
+
+        sq_contours = []
+        for cnt in cnts_sifted_by_length:
+            if CFunc.is_contour_square(cnt):
+                sq_contours.append(cnt)
+
+        Runtime.square_contours = sq_contours
+        Runtime.square_rects = map(CFunc.get_contour_rect, sq_contours)
+
+        squares_img = Runtime.inventory_area_img.copy()
+        cv2.drawContours(squares_img, sq_contours, -1, (0, 255, 0), 1)
+        ExtendedLog.write(LOG_LVL_COMPLETE, f'Squares contours found', squares_img)
+        ImgDebug.display(squares_img)
+
+    @staticmethod
+    def draw_relative_inventory_rects():
+        img = Runtime.inventory_area_img.copy()
+        for x0, y0, x1, y1 in Finals.relative_inventory_rects:
+            cv2.rectangle(img, (x0, y0), (x1, y1), (0, 255, 0), 1)
+        ImgDebug.display(img)
+
+    @staticmethod
+    def group_collisions():
+        grouped = []
+        collisions = Finals.inv_rects_with_collisions.copy()
+
+        while len(collisions):
+            comp = collisions.pop(0)
+            grouped.append([comp])
+            i = 0
+            while i < len(collisions):
+                if CFunc.has_same_rects([comp], collisions[i]):
+                    grouped[len(grouped) - 1].append(collisions.pop(i))
+                else:
+                    i += 1
+
+        Finals.grouped_collisions = grouped
+        ExtendedLog.write(LOG_LVL_DETAILED, f"Коллизии сгрупированы: {Finals.grouped_collisions}")
+
+    @staticmethod
+    def replace_collisions_by_smaller():
+        grouped_colls = Finals.grouped_collisions
+        smaller_rects = []
+        for cur_coll in grouped_colls:
+            smaller_rect = None
+            for rect in cur_coll:
+                if smaller_rect is None:
+                    smaller_rect = rect
+                if rect[0] >= smaller_rect[0] and rect[1] >= smaller_rect[1] \
+                        and rect[2] <= smaller_rect[2] and rect[3] <= smaller_rect[3]:
+                    smaller_rect = rect
+            smaller_rects.append(smaller_rect)
+        Finals.relative_inventory_rects = smaller_rects
+
+# Scripts
+def find_slots():
+    ImgDebug.disable()
+
+    MFunc.load_test_img()
+    MFunc.select_inventory_area_img()
+
+    Finals.inv_rects_with_collisions = []
+    for blur in range(3, 151, 2):
+        for thresh in range(3, 21, 2):
+            MFunc.threshold_inventory_area_img(blur, thresh)
+            MFunc.find_all_contours()
+            MFunc.find_inventory_squares_only()
+            for rect in Runtime.square_rects:
+                Finals.inv_rects_with_collisions.append(rect)
+
+    MFunc.group_collisions()
+    MFunc.replace_collisions_by_smaller()
+
+    ImgDebug.enable()
+    MFunc.draw_relative_inventory_rects()
+    ExtendedLog.write(LOG_LVL_DETAILED, f'Found {len(Finals.relative_inventory_rects)} squares at all.')
 
 
-def draw_inventory_coords():
-    img = CVar.image.copy()
-    for x0, y0, x1, y1 in CVar.inventory_coords:
-        cv2.rectangle(img, (x0, y0), (x1, y1), (0, 255, 0), 3)
-    ImgDebug.display(img)
-
-
-##########################
-# Запуск теста
-#######################
+# Run
 ExtendedLog.enable()
 ExtendedLog.clear()
-ExtendedLog.set_level(constants.LOG_LVL_COMPLETE)
+ExtendedLog.set_level(LOG_LVL_DETAILED)
 ImgDebug.enable()
 
 test = FTest('test1')
-test.bind(take_screenshot, constants.KEY_NUM1)
-test.bind(find_all_inventory_coords, constants.KEY_NUM2)
-test.bind(draw_inventory_coords, constants.KEY_NUM3)
+test.assign(find_slots, KEY_NUM1)
 test.start()
