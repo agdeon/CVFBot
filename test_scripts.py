@@ -26,6 +26,7 @@ class Runtime:
 class Finals:
     inv_rects_with_collisions = None
     relative_inventory_rects = None
+    aligned_rel_inv_rects = None
 
 
 # Computing Functions
@@ -86,10 +87,10 @@ class CFunc:
         ppdicular_cnt = 0
         prev_curve = approx[3]
         for curve in approx:
-            along_axis_movement = \
+            along_axes_movement = \
                 abs(prev_curve[0][0] - curve[0][0]) <= max_deviation < abs(prev_curve[0][1] - curve[0][1]) \
                 or abs(prev_curve[0][0] - curve[0][0]) > max_deviation >= abs(prev_curve[0][1] - curve[0][1])
-            if along_axis_movement:
+            if along_axes_movement:
                 ppdicular_cnt += 1
             prev_curve = curve
         if ppdicular_cnt != 4:
@@ -97,12 +98,33 @@ class CFunc:
 
         return True
 
+    @staticmethod
+    def group_by_dispersion(arr, d):
+        grouped = []
+        prev = None
+        lvl = 0
+        for item in arr:
+            if prev is None:
+                prev = item
+            if len(grouped) == 0:
+                grouped.append([])
+
+            if prev - d <= item <= prev + d:
+                grouped[lvl].append(item)
+            else:
+                grouped.append([])
+                lvl += 1
+                grouped[lvl].append(item)
+            prev = item
+
+        return grouped
+
 
 # Main Functions
 class MFunc:
     @staticmethod
     def load_test_img():
-        Runtime.image = cv2.imread('day.png')
+        Runtime.image = cv2.imread('night.png')
 
     @staticmethod
     def take_screenshot():
@@ -207,9 +229,67 @@ class MFunc:
             smaller_rects.append(smaller_rect)
         Finals.relative_inventory_rects = smaller_rects
 
+    @staticmethod
+    def align_relative_inv_rects():
+        x0_coords, y0_coords, x1_coords, y1_coords = [], [], [], []
+        for x0, y0, x1, y1 in Finals.relative_inventory_rects.copy():
+            x0_coords.append(x0)
+            y0_coords.append(y0)
+            x1_coords.append(x1)
+            y1_coords.append(y1)
+        x0_coords.sort()
+        y0_coords.sort()
+        x1_coords.sort()
+        y1_coords.sort()
+
+        grouped_x0 = CFunc.group_by_dispersion(x0_coords, 5)
+        grouped_y0 = CFunc.group_by_dispersion(y0_coords, 5)
+        grouped_x1 = CFunc.group_by_dispersion(x1_coords, 5)
+        grouped_y1 = CFunc.group_by_dispersion(y1_coords, 5)
+
+        x0_axes = list(map(np.average, grouped_x0))
+        x0_axes = list(map(round, x0_axes))
+        y0_axes = list(map(np.average, grouped_y0))
+        y0_axes = list(map(round, y0_axes))
+        x1_axes = list(map(np.average, grouped_x1))
+        x1_axes = list(map(round, x1_axes))
+        y1_axes = list(map(np.average, grouped_y1))
+        y1_axes = list(map(round, y1_axes))
+        ExtendedLog.write(LOG_LVL_DETAILED, f'x0_axes: {x0_axes} y0_axes:{y0_axes} x1_axes: {x1_axes} y1_axes {y1_axes}')
+
+        i = 0
+        accuracy = 5
+        while i < len(Finals.relative_inventory_rects):
+            x0, y0, x1, y1 = Finals.relative_inventory_rects[i]
+            j = 0
+            for cur_ax in x0_axes:
+                if x0 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
+                    Finals.relative_inventory_rects[i][0] = cur_ax
+                j += 1
+
+            j = 0
+            for cur_ax in y0_axes:
+                if y0 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
+                    Finals.relative_inventory_rects[i][1] = cur_ax
+                j += 1
+
+            j = 0
+            for cur_ax in x1_axes:
+                if x1 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
+                    Finals.relative_inventory_rects[i][2] = cur_ax
+                j += 1
+
+            j = 0
+            for cur_ax in y1_axes:
+                if y1 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
+                    Finals.relative_inventory_rects[i][3] = cur_ax
+                j += 1
+            i += 1
+
 # Scripts
 def find_slots():
     ImgDebug.disable()
+    ExtendedLog.disable()
 
     MFunc.load_test_img()
     MFunc.select_inventory_area_img()
@@ -225,6 +305,7 @@ def find_slots():
 
     MFunc.group_collisions()
     MFunc.replace_collisions_by_smaller()
+    MFunc.align_relative_inv_rects()
 
     ImgDebug.enable()
     MFunc.draw_relative_inventory_rects()
@@ -236,7 +317,6 @@ ExtendedLog.enable()
 ExtendedLog.clear()
 ExtendedLog.set_level(LOG_LVL_DETAILED)
 ImgDebug.enable()
-
 test = FTest('test1')
 test.assign(find_slots, KEY_NUM1)
 test.start()
