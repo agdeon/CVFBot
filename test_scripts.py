@@ -124,7 +124,7 @@ class CFunc:
 class MFunc:
     @staticmethod
     def load_test_img():
-        Runtime.image = cv2.imread('night.png')
+        Runtime.image = cv2.imread('day.png')
 
     @staticmethod
     def take_screenshot():
@@ -295,8 +295,8 @@ def find_slots():
     MFunc.select_inventory_area_img()
 
     Finals.inv_rects_with_collisions = []
-    for blur in range(3, 151, 2):
-        for thresh in range(3, 21, 2):
+    for blur in range(3, 13, 2):
+        for thresh in range(3, 19, 2):
             MFunc.threshold_inventory_area_img(blur, thresh)
             MFunc.find_all_contours()
             MFunc.find_inventory_squares_only()
