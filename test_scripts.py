@@ -124,7 +124,7 @@ class CFunc:
 class MFunc:
     @staticmethod
     def load_test_img():
-        Runtime.image = cv2.imread('day.png')
+        Runtime.image = cv2.imread('resources/day.png')
 
     @staticmethod
     def take_screenshot():
@@ -247,76 +247,158 @@ class MFunc:
         grouped_x1 = CFunc.group_by_dispersion(x1_coords, 5)
         grouped_y1 = CFunc.group_by_dispersion(y1_coords, 5)
 
-        x0_axes = list(map(np.average, grouped_x0))
-        x0_axes = list(map(round, x0_axes))
-        y0_axes = list(map(np.average, grouped_y0))
-        y0_axes = list(map(round, y0_axes))
-        x1_axes = list(map(np.average, grouped_x1))
-        x1_axes = list(map(round, x1_axes))
-        y1_axes = list(map(np.average, grouped_y1))
-        y1_axes = list(map(round, y1_axes))
-        ExtendedLog.write(LOG_LVL_DETAILED, f'x0_axes: {x0_axes} y0_axes:{y0_axes} x1_axes: {x1_axes} y1_axes {y1_axes}')
+        Runtime.x0_axes = list(map(np.average, grouped_x0))
+        Runtime.x0_axes = list(map(round, Runtime.x0_axes))
+        Runtime.y0_axes = list(map(np.average, grouped_y0))
+        Runtime.y0_axes = list(map(round, Runtime.y0_axes))
+        Runtime.x1_axes = list(map(np.average, grouped_x1))
+        Runtime.x1_axes = list(map(round, Runtime.x1_axes))
+        Runtime.y1_axes = list(map(np.average, grouped_y1))
+        Runtime.y1_axes = list(map(round, Runtime.y1_axes))
+        ExtendedLog.write(LOG_LVL_DETAILED, f'Runtime.x0_axes: {Runtime.x0_axes} Runtime.y0_axes:{Runtime.y0_axes} Runtime.x1_axes: {Runtime.x1_axes} Runtime.y1_axes {Runtime.y1_axes}')
 
         i = 0
         accuracy = 5
         while i < len(Finals.relative_inventory_rects):
             x0, y0, x1, y1 = Finals.relative_inventory_rects[i]
             j = 0
-            for cur_ax in x0_axes:
+            for cur_ax in Runtime.x0_axes:
                 if x0 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
                     Finals.relative_inventory_rects[i][0] = cur_ax
                 j += 1
 
             j = 0
-            for cur_ax in y0_axes:
+            for cur_ax in Runtime.y0_axes:
                 if y0 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
                     Finals.relative_inventory_rects[i][1] = cur_ax
                 j += 1
 
             j = 0
-            for cur_ax in x1_axes:
+            for cur_ax in Runtime.x1_axes:
                 if x1 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
                     Finals.relative_inventory_rects[i][2] = cur_ax
                 j += 1
 
             j = 0
-            for cur_ax in y1_axes:
+            for cur_ax in Runtime.y1_axes:
                 if y1 in range(cur_ax - accuracy, cur_ax + accuracy + 1):
                     Finals.relative_inventory_rects[i][3] = cur_ax
                 j += 1
             i += 1
 
-# Scripts
-def find_slots():
-    ImgDebug.disable()
-    ExtendedLog.disable()
+    @staticmethod
+    def find_slots():
+        ImgDebug.disable()
+        ExtendedLog.disable()
 
-    MFunc.load_test_img()
-    MFunc.select_inventory_area_img()
+        MFunc.load_test_img()
+        MFunc.select_inventory_area_img()
 
-    Finals.inv_rects_with_collisions = []
-    for blur in range(3, 13, 2):
-        for thresh in range(3, 19, 2):
-            MFunc.threshold_inventory_area_img(blur, thresh)
-            MFunc.find_all_contours()
-            MFunc.find_inventory_squares_only()
-            for rect in Runtime.square_rects:
-                Finals.inv_rects_with_collisions.append(rect)
+        Finals.inv_rects_with_collisions = []
+        for blur in range(3, 13, 2):
+            for thresh in range(3, 19, 2):
+                MFunc.threshold_inventory_area_img(blur, thresh)
+                MFunc.find_all_contours()
+                MFunc.find_inventory_squares_only()
+                for rect in Runtime.square_rects:
+                    Finals.inv_rects_with_collisions.append(rect)
 
-    MFunc.group_collisions()
-    MFunc.replace_collisions_by_smaller()
-    MFunc.align_relative_inv_rects()
+        MFunc.group_collisions()
+        MFunc.replace_collisions_by_smaller()
+        MFunc.align_relative_inv_rects()
 
-    ImgDebug.enable()
-    MFunc.draw_relative_inventory_rects()
-    ExtendedLog.write(LOG_LVL_DETAILED, f'Found {len(Finals.relative_inventory_rects)} squares at all.')
+        ImgDebug.enable()
+        ExtendedLog.enable()
+        MFunc.draw_relative_inventory_rects()
+        ExtendedLog.write(LOG_LVL_DETAILED, f'Found {len(Finals.relative_inventory_rects)} squares at all.')
+
+    @staticmethod
+    def complete_axes():
+        dsum = 0
+        cnt = 0
+        avg_dist = None
+        axes_num = len(Runtime.x0_axes)
+        if axes_num < 6:
+            for i in range(1, axes_num):
+                dsum += Runtime.x0_axes[i] - Runtime.x0_axes[i-1]
+                cnt += 1
+            avg_dist = round(dsum/cnt)
+
+            hyp_coord = Runtime.x0_axes[0] - avg_dist
+            while hyp_coord > 0:
+                Runtime.x0_axes.insert(0, hyp_coord)
+                hyp_coord = Runtime.x0_axes[0] - avg_dist
+            ExtendedLog.write(LOG_LVL_COMPLETE, f'x0 axes were supplemented: {Runtime.x0_axes}')
+
+        dsum = 0
+        cnt = 0
+        avg_dist = None
+        axes_num = len(Runtime.x1_axes)
+        if axes_num < 6:
+            for i in range(1, axes_num):
+                dsum += Runtime.x1_axes[i] - Runtime.x1_axes[i-1]
+                cnt += 1
+            avg_dist = round(dsum/cnt)
+
+            hyp_coord = Runtime.x1_axes[0] - avg_dist
+            while hyp_coord > avg_dist:
+                Runtime.x1_axes.insert(0, hyp_coord)
+                hyp_coord = Runtime.x1_axes[0] - avg_dist
+            ExtendedLog.write(LOG_LVL_COMPLETE, f'x1 axes were supplemented: {Runtime.x1_axes}')
+
+        dsum = 0
+        cnt = 0
+        avg_dist = None
+        axes_num = len(Runtime.y0_axes)
+        if axes_num < 6:
+            for i in range(1, axes_num - 1):
+                dsum += Runtime.y0_axes[i] - Runtime.y0_axes[i-1]
+                cnt += 1
+            avg_dist = round(dsum/cnt)
+
+            hyp_coord = Runtime.y0_axes[0] - avg_dist
+            while hyp_coord > 0:
+                Runtime.y0_axes.insert(0, hyp_coord)
+                hyp_coord = Runtime.y0_axes[0] - avg_dist
+            ExtendedLog.write(LOG_LVL_COMPLETE, f'y0 axes were supplemented: {Runtime.y0_axes}')
+
+        dsum = 0
+        cnt = 0
+        avg_dist = None
+        axes_num = len(Runtime.y1_axes)
+        if axes_num < 6:
+            for i in range(1, axes_num - 1):
+                dsum += Runtime.y1_axes[i] - Runtime.y1_axes[i-1]
+                cnt += 1
+            avg_dist = round(dsum/cnt)
+
+            hyp_coord = Runtime.y1_axes[0] - avg_dist
+            while hyp_coord > avg_dist:
+                Runtime.y1_axes.insert(0, hyp_coord)
+                hyp_coord = Runtime.y1_axes[0] - avg_dist
+            ExtendedLog.write(LOG_LVL_COMPLETE, f'y1 axes were supplemented: {Runtime.y1_axes}')
+
+    @staticmethod
+    def rebuild_relative_inventory_rects():
+        if len(Runtime.x0_axes) != len(Runtime.x1_axes) or len(Runtime.y0_axes) != len(Runtime.y1_axes):
+            raise Exception('Axes number not sufficient!')
+
+        rects = []
+        for i in range(6):
+            for j in range(5):
+                rects.append([Runtime.x0_axes[i], Runtime.y0_axes[j], Runtime.x1_axes[i], Runtime.y1_axes[j]])
+        Finals.relative_inventory_rects = rects
+        MFunc.draw_relative_inventory_rects()
 
 
 # Run
 ExtendedLog.enable()
 ExtendedLog.clear()
-ExtendedLog.set_level(LOG_LVL_DETAILED)
+ExtendedLog.set_level(LOG_LVL_COMPLETE)
 ImgDebug.enable()
+
 test = FTest('test1')
-test.assign(find_slots, KEY_NUM1)
+test.assign(MFunc.find_slots, KEY_NUM1)
+test.assign(MFunc.complete_axes, KEY_NUM2)
+test.assign(MFunc.rebuild_relative_inventory_rects, KEY_NUM3)
 test.start()

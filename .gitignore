@@ -4,3 +4,10 @@
 /test.py
 /test1.py
 /Logs
+/.idea
+/__pycache__
+/venv
+/Logs
+/.git
+/.gitattributes
+/.gitignore
