@@ -4,7 +4,7 @@ import numpy as np
 import math
 import time
 
-from constants import *
+from project_constants import *
 from func_tester import *
 from extended_log import *
 from img_debug import *
@@ -291,7 +291,7 @@ class MFunc:
         ImgDebug.disable()
         ExtendedLog.disable()
 
-        MFunc.load_test_img()
+        #MFunc.load_test_img()
         MFunc.select_inventory_area_img()
 
         Finals.inv_rects_with_collisions = []
@@ -398,7 +398,9 @@ ExtendedLog.set_level(LOG_LVL_COMPLETE)
 ImgDebug.enable()
 
 test = FTest('test1')
+MFunc.load_test_img()
 test.assign(MFunc.find_slots, KEY_NUM1)
 test.assign(MFunc.complete_axes, KEY_NUM2)
 test.assign(MFunc.rebuild_relative_inventory_rects, KEY_NUM3)
 test.start()
+print('hello')

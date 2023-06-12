@@ -2,7 +2,7 @@ import sys
 import time
 from pynput import keyboard
 
-import constants
+import project_constants
 from extended_log import ExtendedLog
 
 
@@ -15,14 +15,14 @@ class FTest:
         self.numpad_listener = None
         self.associations = []
         self.interm_resulst = None
-        self.assign(self._stop, constants.KEY_NUM0)
+        self.assign(self._stop, project_constants.KEY_NUM0)
 
     def assign(self, func, key_const):
         self.associations.append((func, key_const))
-        ExtendedLog.write(constants.LOG_LVL_COMPLETE, f"[{self.name}]: Функция {func.__name__} привязана к клавише {key_const}")
+        ExtendedLog.write(project_constants.LOG_LVL_COMPLETE, f"[{self.name}]: Функция {func.__name__} привязана к клавише {key_const}")
 
     def start(self, loop=True):
-        ExtendedLog.write(constants.LOG_LVL_COMPLETE, f"[{self.name}]: Test запущен с loop={loop}")
+        ExtendedLog.write(project_constants.LOG_LVL_COMPLETE, f"[{self.name}]: Test запущен с loop={loop}")
         self.numpad_listener = keyboard.Listener(on_press=self._numpad_on_press)
         self.numpad_listener.start()
         if not loop:
@@ -30,8 +30,8 @@ class FTest:
         while 1:
             time.sleep(0.2)
             if self.exit:
-                ExtendedLog.write(constants.LOG_LVL_COMPLETE, f"[{self.name}]: Test завершен")
-                sys.exit()
+                ExtendedLog.write(project_constants.LOG_LVL_COMPLETE, f"[{self.name}]: Test завершен")
+                break
 
     def _numpad_on_press(self, key_code):
         func = self._get_func_by_key(key_code)

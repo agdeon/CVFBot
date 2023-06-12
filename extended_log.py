@@ -2,12 +2,12 @@ import os
 import time
 import cv2
 import shutil
-import constants
+import project_constants
 
 
 class ExtendedLog:
     enabled = False
-    level = constants.LOG_LVL_COMMON
+    level = project_constants.LOG_LVL_COMMON
     folder_name = "Logs"
     img_folder_name = "ImageLog"
     filename = 'TextLog.txt'
@@ -22,9 +22,9 @@ class ExtendedLog:
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         image_log_dir = os.path.join(log_dir, ExtendedLog.img_folder_name)
-        if not os.path.exists(image_log_dir):
-            os.mkdir(image_log_dir)
         if img is not None:
+            if not os.path.exists(image_log_dir):
+                os.mkdir(image_log_dir)
             img_name = str(round(time.time()*1000)) + ExtendedLog.img_type
             textlog = f'{text} -> Image: {img_name}'
             cv2.imwrite(os.path.join(image_log_dir, img_name), img)
